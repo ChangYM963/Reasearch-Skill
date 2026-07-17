@@ -1,0 +1,1036 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openai.local/discover-experimental-gaps/schemas/run-state.schema.json",
+  "title": "Discover Experimental Gaps run state",
+  "description": "Canonical v1.0.0 manifest. Cross-revision immutability, transition legality, and hash equality are also enforced by validate_gap_run.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "skill_version",
+    "fingerprint_version",
+    "run_id",
+    "created_at",
+    "updated_at",
+    "manifest_revision",
+    "ledger_version",
+    "phase",
+    "run_status",
+    "decision",
+    "independence_level",
+    "scope",
+    "governance",
+    "claim",
+    "fingerprints",
+    "gates",
+    "artifacts",
+    "verdict_history",
+    "blockers",
+    "events"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "skill_version": {
+      "const": "1.0.0"
+    },
+    "fingerprint_version": {
+      "const": "1.0.0"
+    },
+    "run_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "created_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "manifest_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ledger_version": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "phase": {
+      "enum": [
+        "intake",
+        "venue_map",
+        "discovery",
+        "falsification",
+        "smoke",
+        "final_audit",
+        "freeze",
+        "closed"
+      ]
+    },
+    "run_status": {
+      "enum": [
+        "ready",
+        "active",
+        "awaiting_user",
+        "awaiting_research",
+        "insufficient_evidence",
+        "blocked",
+        "complete"
+      ]
+    },
+    "decision": {
+      "enum": [
+        "undecided",
+        "GO",
+        "STOP"
+      ]
+    },
+    "independence_level": {
+      "enum": [
+        "sequential_unblinded",
+        "parallel_role_isolated",
+        "mixed"
+      ]
+    },
+    "scope": {
+      "type": "object"
+    },
+    "governance": {
+      "$ref": "#/$defs/governance"
+    },
+    "claim": {
+      "$ref": "#/$defs/claimState"
+    },
+    "fingerprints": {
+      "$ref": "#/$defs/fingerprints"
+    },
+    "gates": {
+      "$ref": "#/$defs/gates"
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/artifactRecord"
+      }
+    },
+    "verdict_history": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "phase": {
+            "const": "closed"
+          }
+        },
+        "required": [
+          "phase"
+        ]
+      },
+      "then": {
+        "properties": {
+          "run_status": {
+            "const": "complete"
+          },
+          "decision": {
+            "enum": [
+              "GO",
+              "STOP"
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "run_status": {
+            "not": {
+              "const": "complete"
+            }
+          },
+          "decision": {
+            "const": "undecided"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "GO"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "fingerprints": {
+            "$ref": "#/$defs/completeFingerprints"
+          },
+          "gates": {
+            "$ref": "#/$defs/allPassedGates"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "STOP"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "gates": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/venueStop"
+              },
+              {
+                "$ref": "#/$defs/falsificationStop"
+              },
+              {
+                "$ref": "#/$defs/smokeStop"
+              },
+              {
+                "$ref": "#/$defs/finalAuditStop"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "run_status": {
+            "const": "insufficient_evidence"
+          }
+        },
+        "required": [
+          "run_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "gates": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/venueInsufficient"
+              },
+              {
+                "$ref": "#/$defs/falsificationInsufficient"
+              },
+              {
+                "$ref": "#/$defs/smokeInsufficient"
+              },
+              {
+                "$ref": "#/$defs/finalAuditInsufficient"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "gates": {
+            "properties": {
+              "smoke": {
+                "properties": {
+                  "status": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            },
+            "required": [
+              "smoke"
+            ]
+          }
+        },
+        "required": [
+          "gates"
+        ]
+      },
+      "then": {
+        "properties": {
+          "fingerprints": {
+            "properties": {
+              "claim": {
+                "$ref": "#/$defs/sha256"
+              },
+              "protocol": {
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "gates": {
+            "properties": {
+              "final_audit": {
+                "properties": {
+                  "status": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            },
+            "required": [
+              "final_audit"
+            ]
+          }
+        },
+        "required": [
+          "gates"
+        ]
+      },
+      "then": {
+        "properties": {
+          "fingerprints": {
+            "properties": {
+              "claim": {
+                "$ref": "#/$defs/sha256"
+              },
+              "audit": {
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "gates": {
+            "properties": {
+              "freeze_validation": {
+                "properties": {
+                  "status": {
+                    "const": "passed"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            },
+            "required": [
+              "freeze_validation"
+            ]
+          }
+        },
+        "required": [
+          "gates"
+        ]
+      },
+      "then": {
+        "properties": {
+          "phase": {
+            "const": "closed"
+          },
+          "run_status": {
+            "const": "complete"
+          },
+          "decision": {
+            "const": "GO"
+          },
+          "fingerprints": {
+            "$ref": "#/$defs/completeFingerprints"
+          },
+          "gates": {
+            "$ref": "#/$defs/allPassedGates"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "claim": {
+            "properties": {
+              "current_version": {
+                "const": 0
+              }
+            },
+            "required": [
+              "current_version"
+            ]
+          }
+        },
+        "required": [
+          "claim"
+        ]
+      },
+      "then": {
+        "properties": {
+          "claim": {
+            "properties": {
+              "current": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "claim": {
+            "properties": {
+              "current": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "nullableSha256": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "nullableIdentifier": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/identifier"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "narrow_limit",
+        "narrow_count"
+      ],
+      "properties": {
+        "narrow_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 2
+        },
+        "narrow_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "claimState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "current_version",
+        "current",
+        "history"
+      ],
+      "properties": {
+        "current_version": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "current": {
+          "oneOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "fingerprints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim",
+        "protocol",
+        "audit"
+      ],
+      "properties": {
+        "claim": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "protocol": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "audit": {
+          "$ref": "#/$defs/nullableSha256"
+        }
+      }
+    },
+    "completeFingerprints": {
+      "type": "object",
+      "properties": {
+        "claim": {
+          "$ref": "#/$defs/sha256"
+        },
+        "protocol": {
+          "$ref": "#/$defs/sha256"
+        },
+        "audit": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "required": [
+        "claim",
+        "protocol",
+        "audit"
+      ]
+    },
+    "validFor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim_fingerprint",
+        "protocol_fingerprint",
+        "audit_fingerprint",
+        "ledger_version"
+      ],
+      "properties": {
+        "claim_fingerprint": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "protocol_fingerprint": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "audit_fingerprint": {
+          "$ref": "#/$defs/nullableSha256"
+        },
+        "ledger_version": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "gateRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "outcome",
+        "subject_refs",
+        "artifact_ids",
+        "valid_for",
+        "validated_at",
+        "validator_version",
+        "reason_codes",
+        "unresolved_lead_ids",
+        "invalidated_by_event_id"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "pending",
+            "awaiting_report",
+            "validating",
+            "review_required",
+            "passed",
+            "failed",
+            "stale"
+          ]
+        },
+        "outcome": {
+          "oneOf": [
+            {
+              "enum": [
+                "PASS",
+                "GO",
+                "NARROW",
+                "STOP",
+                "BLOCKED",
+                "INSUFFICIENT_EVIDENCE",
+                "FAIL"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subject_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "artifact_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "valid_for": {
+          "$ref": "#/$defs/validFor"
+        },
+        "validated_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "validator_version": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/nonEmptyString"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "unresolved_lead_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "invalidated_by_event_id": {
+          "$ref": "#/$defs/nullableIdentifier"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "passed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": ["PASS", "GO"]
+              },
+              "artifact_ids": {
+                "minItems": 1
+              },
+              "validated_at": {
+                "$ref": "#/$defs/timestamp"
+              },
+              "validator_version": {
+                "$ref": "#/$defs/nonEmptyString"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "BLOCKED",
+                  "STOP",
+                  "INSUFFICIENT_EVIDENCE",
+                  "FAIL"
+                ]
+              },
+              "artifact_ids": {
+                "minItems": 1
+              },
+              "validated_at": {
+                "$ref": "#/$defs/timestamp"
+              },
+              "validator_version": {
+                "$ref": "#/$defs/nonEmptyString"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "review_required"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "oneOf": [
+                  {
+                    "const": "NARROW"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "pending",
+                  "awaiting_report",
+                  "validating",
+                  "stale"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "passedGate": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "passed"
+        },
+        "outcome": {
+          "enum": ["PASS", "GO"]
+        }
+      },
+      "required": [
+        "status",
+        "outcome"
+      ]
+    },
+    "stopGate": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "failed"
+        },
+        "outcome": {
+          "const": "STOP"
+        }
+      },
+      "required": [
+        "status",
+        "outcome"
+      ]
+    },
+    "insufficientGate": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "failed"
+        },
+        "outcome": {
+          "const": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "required": [
+        "status",
+        "outcome"
+      ]
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "venue_map",
+        "falsification",
+        "smoke",
+        "final_audit",
+        "freeze_validation"
+      ],
+      "properties": {
+        "venue_map": {
+          "$ref": "#/$defs/gateRecord"
+        },
+        "falsification": {
+          "$ref": "#/$defs/gateRecord"
+        },
+        "smoke": {
+          "$ref": "#/$defs/gateRecord"
+        },
+        "final_audit": {
+          "$ref": "#/$defs/gateRecord"
+        },
+        "freeze_validation": {
+          "$ref": "#/$defs/gateRecord"
+        }
+      }
+    },
+    "allPassedGates": {
+      "type": "object",
+      "properties": {
+        "venue_map": {
+          "$ref": "#/$defs/passedGate"
+        },
+        "falsification": {
+          "$ref": "#/$defs/passedGate"
+        },
+        "smoke": {
+          "$ref": "#/$defs/passedGate"
+        },
+        "final_audit": {
+          "$ref": "#/$defs/passedGate"
+        },
+        "freeze_validation": {
+          "$ref": "#/$defs/passedGate"
+        }
+      },
+      "required": [
+        "venue_map",
+        "falsification",
+        "smoke",
+        "final_audit",
+        "freeze_validation"
+      ]
+    },
+    "venueStop": {
+      "properties": {
+        "venue_map": {
+          "$ref": "#/$defs/stopGate"
+        }
+      },
+      "required": [
+        "venue_map"
+      ]
+    },
+    "falsificationStop": {
+      "properties": {
+        "falsification": {
+          "$ref": "#/$defs/stopGate"
+        }
+      },
+      "required": [
+        "falsification"
+      ]
+    },
+    "smokeStop": {
+      "properties": {
+        "smoke": {
+          "$ref": "#/$defs/stopGate"
+        }
+      },
+      "required": [
+        "smoke"
+      ]
+    },
+    "finalAuditStop": {
+      "properties": {
+        "final_audit": {
+          "$ref": "#/$defs/stopGate"
+        }
+      },
+      "required": [
+        "final_audit"
+      ]
+    },
+    "venueInsufficient": {
+      "properties": {
+        "venue_map": {
+          "$ref": "#/$defs/insufficientGate"
+        }
+      },
+      "required": [
+        "venue_map"
+      ]
+    },
+    "falsificationInsufficient": {
+      "properties": {
+        "falsification": {
+          "$ref": "#/$defs/insufficientGate"
+        }
+      },
+      "required": [
+        "falsification"
+      ]
+    },
+    "smokeInsufficient": {
+      "properties": {
+        "smoke": {
+          "$ref": "#/$defs/insufficientGate"
+        }
+      },
+      "required": [
+        "smoke"
+      ]
+    },
+    "finalAuditInsufficient": {
+      "properties": {
+        "final_audit": {
+          "$ref": "#/$defs/insufficientGate"
+        }
+      },
+      "required": [
+        "final_audit"
+      ]
+    },
+    "artifactStatus": {
+      "enum": [
+        "current",
+        "review_required",
+        "stale",
+        "superseded"
+      ]
+    },
+    "artifactRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "kind",
+        "path",
+        "sha256",
+        "input_hashes",
+        "status",
+        "sequence",
+        "recorded_at"
+      ],
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "kind": {
+          "$ref": "#/$defs/identifier"
+        },
+        "path": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "input_hashes": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/identifier"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/nullableSha256"
+          }
+        },
+        "subject_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          },
+          "uniqueItems": true
+        },
+        "status": {
+          "$ref": "#/$defs/artifactStatus"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "recorded_at": {
+          "$ref": "#/$defs/timestamp"
+        }
+      }
+    }
+  }
+}

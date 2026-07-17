@@ -1,0 +1,741 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.local/discover-experimental-gaps/experiment-freeze.schema.json",
+  "title": "Bilingual Experiment Freeze Dossier",
+  "description": "Decision-complete bilingual dossier for a GO, STOP, or INSUFFICIENT_EVIDENCE experimental-gap candidate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "freeze_id",
+    "run_id",
+    "gap_id",
+    "claim_version",
+    "claim_fingerprint",
+    "protocol_fingerprint",
+    "audit_fingerprint",
+    "artifact_status",
+    "generated_at",
+    "search_cutoff",
+    "venue",
+    "domain_adapters",
+    "title",
+    "research_question",
+    "safe_novelty_claim",
+    "decision",
+    "gates",
+    "claim_history",
+    "closest_papers",
+    "data",
+    "baselines",
+    "experiment_design",
+    "statistics",
+    "robustness",
+    "reproducibility",
+    "result_routes",
+    "final_audit",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "freeze_id": {"$ref": "#/$defs/nonEmptyString"},
+    "run_id": {"$ref": "#/$defs/nonEmptyString"},
+    "gap_id": {"$ref": "#/$defs/nonEmptyString"},
+    "claim_version": {"type": "integer", "minimum": 1},
+    "claim_fingerprint": {"$ref": "#/$defs/hash"},
+    "protocol_fingerprint": {"$ref": "#/$defs/hash"},
+    "audit_fingerprint": {"$ref": "#/$defs/hash"},
+    "artifact_status": {
+      "enum": [
+        "FROZEN_FOR_EXPERIMENT",
+        "CLOSED_STOP",
+        "PAUSED_INSUFFICIENT_EVIDENCE"
+      ]
+    },
+    "generated_at": {"type": "string", "format": "date-time"},
+    "search_cutoff": {"type": "string", "format": "date"},
+    "venue": {"$ref": "#/$defs/venue"},
+    "domain_adapters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": [
+          "AI_ML",
+          "DECISION_POLICY",
+          "CAUSAL_OBSERVATIONAL",
+          "HUMAN_SUBJECTS",
+          "CUSTOM"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "title": {"$ref": "#/$defs/bilingualText"},
+    "research_question": {"$ref": "#/$defs/bilingualText"},
+    "safe_novelty_claim": {"$ref": "#/$defs/bilingualText"},
+    "decision": {"$ref": "#/$defs/decision"},
+    "gates": {"$ref": "#/$defs/gates"},
+    "claim_history": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {"$ref": "#/$defs/narrowTransition"}
+    },
+    "closest_papers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/closestPaper"}
+    },
+    "backup_candidate_ref": {"$ref": "#/$defs/uriOrPath"},
+    "data": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/dataset"}
+    },
+    "baselines": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/baseline"}
+    },
+    "experiment_design": {"$ref": "#/$defs/experimentDesign"},
+    "statistics": {"$ref": "#/$defs/statistics"},
+    "robustness": {"$ref": "#/$defs/robustness"},
+    "reproducibility": {"$ref": "#/$defs/reproducibility"},
+    "result_routes": {"$ref": "#/$defs/resultRoutes"},
+    "final_audit": {"$ref": "#/$defs/finalAudit"},
+    "provenance": {"$ref": "#/$defs/provenance"}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "properties": {"status": {"const": "GO"}},
+            "required": ["status"]
+          }
+        },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": {
+          "artifact_status": {"const": "FROZEN_FOR_EXPERIMENT"},
+          "gates": {"$ref": "#/$defs/allPassGates"},
+          "final_audit": {
+            "properties": {"status": {"const": "PASS"}}
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "properties": {"status": {"const": "STOP"}},
+            "required": ["status"]
+          }
+        },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": {"artifact_status": {"const": "CLOSED_STOP"}}
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "properties": {"status": {"const": "INSUFFICIENT_EVIDENCE"}},
+            "required": ["status"]
+          }
+        },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": {
+          "artifact_status": {"const": "PAUSED_INSUFFICIENT_EVIDENCE"},
+          "decision": {
+            "properties": {"unblock_requirements": {"minItems": 1}}
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "uriOrPath": {"type": "string", "minLength": 1},
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "bilingualText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["zh", "en"],
+      "properties": {
+        "zh": {"type": "string", "minLength": 1},
+        "en": {"type": "string", "minLength": 1}
+      }
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/nonEmptyString"},
+      "uniqueItems": true
+    },
+    "venue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "kind",
+        "scope_source",
+        "target_window",
+        "fit_rationale"
+      ],
+      "properties": {
+        "name": {"$ref": "#/$defs/nonEmptyString"},
+        "kind": {"enum": ["JOURNAL", "CONFERENCE", "SPECIAL_ISSUE"]},
+        "special_issue": {"type": "string"},
+        "scope_source": {"$ref": "#/$defs/uriOrPath"},
+        "cfp_source": {"$ref": "#/$defs/uriOrPath"},
+        "target_window": {"$ref": "#/$defs/nonEmptyString"},
+        "fit_rationale": {"$ref": "#/$defs/bilingualText"}
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reason_codes",
+        "rationale",
+        "evidence_refs",
+        "unblock_requirements",
+        "full_experiment_authorized"
+      ],
+      "properties": {
+        "status": {"enum": ["GO", "STOP", "INSUFFICIENT_EVIDENCE"]},
+        "reason_codes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/nonEmptyString"},
+          "uniqueItems": true
+        },
+        "rationale": {"$ref": "#/$defs/bilingualText"},
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/uriOrPath"}
+        },
+        "unblock_requirements": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/bilingualText"}
+        },
+        "full_experiment_authorized": {
+          "description": "Freeze is a design artifact, never an execution authorization.",
+          "const": false
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "rationale", "evidence_refs"],
+      "properties": {
+        "status": {"enum": ["PASS", "FAIL", "INSUFFICIENT"]},
+        "rationale": {"$ref": "#/$defs/bilingualText"},
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/uriOrPath"}
+        }
+      }
+    },
+    "passGate": {
+      "allOf": [
+        {"$ref": "#/$defs/gate"},
+        {"properties": {"status": {"const": "PASS"}}}
+      ]
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "venue_fit",
+        "evidence_sufficiency",
+        "novelty",
+        "importance",
+        "discrimination",
+        "baseline_fairness",
+        "feasibility",
+        "information_value",
+        "smoke",
+        "final_audit"
+      ],
+      "properties": {
+        "venue_fit": {"$ref": "#/$defs/gate"},
+        "evidence_sufficiency": {"$ref": "#/$defs/gate"},
+        "novelty": {"$ref": "#/$defs/gate"},
+        "importance": {"$ref": "#/$defs/gate"},
+        "discrimination": {"$ref": "#/$defs/gate"},
+        "baseline_fairness": {"$ref": "#/$defs/gate"},
+        "feasibility": {"$ref": "#/$defs/gate"},
+        "information_value": {"$ref": "#/$defs/gate"},
+        "smoke": {"$ref": "#/$defs/gate"},
+        "final_audit": {"$ref": "#/$defs/gate"}
+      }
+    },
+    "allPassGates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "venue_fit",
+        "evidence_sufficiency",
+        "novelty",
+        "importance",
+        "discrimination",
+        "baseline_fairness",
+        "feasibility",
+        "information_value",
+        "smoke",
+        "final_audit"
+      ],
+      "properties": {
+        "venue_fit": {"$ref": "#/$defs/passGate"},
+        "evidence_sufficiency": {"$ref": "#/$defs/passGate"},
+        "novelty": {"$ref": "#/$defs/passGate"},
+        "importance": {"$ref": "#/$defs/passGate"},
+        "discrimination": {"$ref": "#/$defs/passGate"},
+        "baseline_fairness": {"$ref": "#/$defs/passGate"},
+        "feasibility": {"$ref": "#/$defs/passGate"},
+        "information_value": {"$ref": "#/$defs/passGate"},
+        "smoke": {"$ref": "#/$defs/passGate"},
+        "final_audit": {"$ref": "#/$defs/passGate"}
+      }
+    },
+    "narrowTransition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from_version",
+        "to_version",
+        "from_claim_fingerprint",
+        "to_claim_fingerprint",
+        "changed_fields",
+        "reason",
+        "triggered_by_results",
+        "fresh_validation_required"
+      ],
+      "properties": {
+        "from_version": {"type": "integer", "minimum": 1},
+        "to_version": {"type": "integer", "minimum": 2},
+        "from_claim_fingerprint": {"$ref": "#/$defs/hash"},
+        "to_claim_fingerprint": {"$ref": "#/$defs/hash"},
+        "changed_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "POPULATION",
+              "METHOD",
+              "COMPARATOR",
+              "OUTCOME_ESTIMAND",
+              "DISTRIBUTION_REGIME",
+              "QUANTIFIER",
+              "MECHANISM",
+              "DECISION_CONTEXT",
+              "BUDGET"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "reason": {"$ref": "#/$defs/bilingualText"},
+        "evidence_refs": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uriOrPath"}
+        },
+        "triggered_by_results": {"type": "boolean"},
+        "fresh_validation_required": {"type": "boolean"}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"triggered_by_results": {"const": true}},
+            "required": ["triggered_by_results"]
+          },
+          "then": {
+            "properties": {"fresh_validation_required": {"const": true}}
+          }
+        }
+      ]
+    },
+    "closestPaper": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "paper_id",
+        "citation",
+        "source_url",
+        "published_at",
+        "verified_full_text",
+        "relation",
+        "differentiator",
+        "code_availability",
+        "data_availability",
+        "evidence_refs"
+      ],
+      "properties": {
+        "paper_id": {"$ref": "#/$defs/nonEmptyString"},
+        "citation": {"$ref": "#/$defs/nonEmptyString"},
+        "source_url": {"type": "string", "format": "uri"},
+        "doi": {"type": "string"},
+        "published_at": {"type": "string", "format": "date"},
+        "verified_full_text": {"type": "boolean"},
+        "relation": {
+          "enum": ["COVERS", "PARTIALLY_COVERS", "ADJACENT", "CONTRADICTS", "SUPPORTS"]
+        },
+        "differentiator": {"$ref": "#/$defs/bilingualText"},
+        "code_availability": {
+          "enum": ["PUBLIC_VERIFIED", "LINK_UNVERIFIED", "ON_REQUEST", "NOT_PUBLIC", "NOT_APPLICABLE", "UNKNOWN"]
+        },
+        "data_availability": {
+          "enum": ["PUBLIC_VERIFIED", "RESTRICTED", "ON_REQUEST", "NOT_PUBLIC", "NOT_APPLICABLE", "UNKNOWN"]
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/uriOrPath"}
+        }
+      }
+    },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data_id",
+        "version",
+        "role",
+        "access",
+        "license_or_basis",
+        "split_id",
+        "split_protocol",
+        "independent_unit",
+        "distribution",
+        "final_holdout"
+      ],
+      "properties": {
+        "data_id": {"$ref": "#/$defs/nonEmptyString"},
+        "version": {"$ref": "#/$defs/nonEmptyString"},
+        "role": {"enum": ["TRAIN", "VALIDATION", "TEST", "OOD", "ROBUSTNESS", "POLICY_EVALUATION"]},
+        "access": {"enum": ["PUBLIC", "RESTRICTED", "PRIVATE", "TO_BE_COLLECTED"]},
+        "license_or_basis": {"$ref": "#/$defs/nonEmptyString"},
+        "split_id": {"$ref": "#/$defs/nonEmptyString"},
+        "split_protocol": {"$ref": "#/$defs/bilingualText"},
+        "independent_unit": {"$ref": "#/$defs/nonEmptyString"},
+        "distribution": {"$ref": "#/$defs/bilingualText"},
+        "final_holdout": {"type": "boolean"}
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_id",
+        "version",
+        "category",
+        "source_ref",
+        "strength_rationale",
+        "data_access_parity",
+        "compute_matching",
+        "tuning_budget"
+      ],
+      "properties": {
+        "baseline_id": {"$ref": "#/$defs/nonEmptyString"},
+        "version": {"$ref": "#/$defs/nonEmptyString"},
+        "category": {
+          "enum": ["CONSTANT_RANDOM", "SIMPLE_RULE", "CLASSICAL", "RECENT_STRONG", "CURRENT_PRACTICE", "ORACLE"]
+        },
+        "source_ref": {"$ref": "#/$defs/uriOrPath"},
+        "strength_rationale": {"$ref": "#/$defs/bilingualText"},
+        "data_access_parity": {"type": "boolean"},
+        "compute_matching": {"$ref": "#/$defs/nonEmptyString"},
+        "tuning_budget": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "bilingualItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description"],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "description": {"$ref": "#/$defs/bilingualText"},
+        "rationale": {"$ref": "#/$defs/bilingualText"}
+      }
+    },
+    "experimentDesign": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_experiment",
+        "comparison",
+        "smoke_record_refs",
+        "mechanism_ablations",
+        "oracle_or_voi_tests",
+        "compute_budget",
+        "stopping_rules"
+      ],
+      "properties": {
+        "primary_experiment": {"$ref": "#/$defs/bilingualText"},
+        "comparison": {"$ref": "#/$defs/bilingualText"},
+        "smoke_record_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/uriOrPath"}
+        },
+        "mechanism_ablations": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/bilingualItem"}
+        },
+        "oracle_or_voi_tests": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/bilingualItem"}
+        },
+        "compute_budget": {"$ref": "#/$defs/nonEmptyString"},
+        "stopping_rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/bilingualText"}
+        }
+      }
+    },
+    "sesoi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scale",
+        "lower_margin",
+        "upper_margin",
+        "rationale",
+        "source",
+        "locked_before_results"
+      ],
+      "properties": {
+        "scale": {"$ref": "#/$defs/nonEmptyString"},
+        "lower_margin": {"type": "number"},
+        "upper_margin": {"type": "number"},
+        "rationale": {"$ref": "#/$defs/bilingualText"},
+        "source": {"$ref": "#/$defs/uriOrPath"},
+        "locked_before_results": {"const": true}
+      }
+    },
+    "frequentistEstimation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "alpha", "estimation_ci_level", "interval_method", "primary_test"],
+      "properties": {
+        "type": {"const": "FREQUENTIST_ESTIMATION"},
+        "alpha": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.5},
+        "estimation_ci_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "interval_method": {"$ref": "#/$defs/nonEmptyString"},
+        "primary_test": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "frequentistTost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "alpha",
+        "equivalence_ci_level",
+        "estimation_ci_level",
+        "interval_method",
+        "target_power"
+      ],
+      "properties": {
+        "type": {"const": "FREQUENTIST_TOST"},
+        "alpha": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.5},
+        "equivalence_ci_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "estimation_ci_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "interval_method": {"$ref": "#/$defs/nonEmptyString"},
+        "target_power": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1}
+      }
+    },
+    "bayesianRope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "likelihood",
+        "prior_specification",
+        "rope_lower",
+        "rope_upper",
+        "posterior_threshold",
+        "interval_probability",
+        "sensitivity_plan"
+      ],
+      "properties": {
+        "type": {"const": "BAYESIAN_ROPE"},
+        "likelihood": {"$ref": "#/$defs/nonEmptyString"},
+        "prior_specification": {"$ref": "#/$defs/nonEmptyString"},
+        "rope_lower": {"type": "number"},
+        "rope_upper": {"type": "number"},
+        "posterior_threshold": {"type": "number", "exclusiveMinimum": 0.5, "exclusiveMaximum": 1},
+        "interval_probability": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "sensitivity_plan": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "statistics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "estimand",
+        "independent_unit",
+        "primary_endpoint",
+        "sesoi",
+        "framework",
+        "sample_size",
+        "target_precision",
+        "multiplicity_policy",
+        "missing_data_rule"
+      ],
+      "properties": {
+        "estimand": {"$ref": "#/$defs/bilingualText"},
+        "independent_unit": {"$ref": "#/$defs/nonEmptyString"},
+        "primary_endpoint": {"$ref": "#/$defs/nonEmptyString"},
+        "sesoi": {"$ref": "#/$defs/sesoi"},
+        "framework": {
+          "oneOf": [
+            {"$ref": "#/$defs/frequentistEstimation"},
+            {"$ref": "#/$defs/frequentistTost"},
+            {"$ref": "#/$defs/bayesianRope"}
+          ]
+        },
+        "sample_size": {"type": "integer", "minimum": 1},
+        "target_precision": {"$ref": "#/$defs/nonEmptyString"},
+        "multiplicity_policy": {"$ref": "#/$defs/nonEmptyString"},
+        "missing_data_rule": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "robustness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ood_tests", "robustness_tests", "subgroup_tests", "threat_model"],
+      "properties": {
+        "ood_tests": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/bilingualItem"}
+        },
+        "robustness_tests": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/bilingualItem"}
+        },
+        "subgroup_tests": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/bilingualItem"}
+        },
+        "threat_model": {"$ref": "#/$defs/bilingualText"}
+      }
+    },
+    "reproducibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code_availability",
+        "code_plan",
+        "data_availability",
+        "data_plan",
+        "environment_ref",
+        "seed_policy",
+        "artifact_refs"
+      ],
+      "properties": {
+        "code_availability": {
+          "enum": ["PUBLIC_VERIFIED", "PLANNED_PUBLIC", "RESTRICTED", "NOT_PUBLIC", "NOT_APPLICABLE"]
+        },
+        "code_plan": {"$ref": "#/$defs/bilingualText"},
+        "data_availability": {
+          "enum": ["PUBLIC_VERIFIED", "PLANNED_PUBLIC", "RESTRICTED", "NOT_PUBLIC", "NOT_APPLICABLE"]
+        },
+        "data_plan": {"$ref": "#/$defs/bilingualText"},
+        "environment_ref": {"$ref": "#/$defs/uriOrPath"},
+        "seed_policy": {"$ref": "#/$defs/nonEmptyString"},
+        "artifact_refs": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/uriOrPath"}
+        }
+      }
+    },
+    "resultRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trigger", "claim_that_survives", "interpretation", "next_action"],
+      "properties": {
+        "trigger": {"$ref": "#/$defs/bilingualText"},
+        "claim_that_survives": {"$ref": "#/$defs/bilingualText"},
+        "interpretation": {"$ref": "#/$defs/bilingualText"},
+        "next_action": {"$ref": "#/$defs/bilingualText"}
+      }
+    },
+    "resultRoutes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["positive", "weak_or_inconclusive", "negative_equivalent_or_harmful"],
+      "properties": {
+        "positive": {"$ref": "#/$defs/resultRoute"},
+        "weak_or_inconclusive": {"$ref": "#/$defs/resultRoute"},
+        "negative_equivalent_or_harmful": {"$ref": "#/$defs/resultRoute"}
+      }
+    },
+    "finalAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exact_claim_fingerprint",
+        "status",
+        "searched_at",
+        "search_cutoff",
+        "query_log_ref",
+        "new_closest_paper_ids",
+        "evidence_refs"
+      ],
+      "properties": {
+        "exact_claim_fingerprint": {"$ref": "#/$defs/hash"},
+        "status": {"enum": ["PASS", "FAIL", "INSUFFICIENT"]},
+        "searched_at": {"type": "string", "format": "date-time"},
+        "search_cutoff": {"type": "string", "format": "date"},
+        "query_log_ref": {"$ref": "#/$defs/uriOrPath"},
+        "new_closest_paper_ids": {"$ref": "#/$defs/stringArray"},
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/uriOrPath"}
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_ledger_ref",
+        "venue_map_ref",
+        "falsification_report_refs",
+        "smoke_record_refs",
+        "final_audit_ref",
+        "generated_by"
+      ],
+      "properties": {
+        "evidence_ledger_ref": {"$ref": "#/$defs/uriOrPath"},
+        "venue_map_ref": {"$ref": "#/$defs/uriOrPath"},
+        "falsification_report_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/uriOrPath"}
+        },
+        "smoke_record_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/uriOrPath"}
+        },
+        "final_audit_ref": {"$ref": "#/$defs/uriOrPath"},
+        "generated_by": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    }
+  }
+}

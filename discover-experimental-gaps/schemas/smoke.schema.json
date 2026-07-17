@@ -1,0 +1,481 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.local/discover-experimental-gaps/smoke.schema.json",
+  "title": "Experimental Gap Smoke Artifacts",
+  "oneOf": [
+    {"$ref": "#/$defs/preregistration"},
+    {"$ref": "#/$defs/authorization"},
+    {"$ref": "#/$defs/result"}
+  ],
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "nonEmpty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "quantity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit"],
+      "properties": {
+        "value": {"type": ["number", "string"]},
+        "unit": {"$ref": "#/$defs/nonEmpty"}
+      }
+    },
+    "asymmetricSesoi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lower_margin", "upper_margin", "unit"],
+      "properties": {
+        "lower_margin": {"type": ["number", "string"]},
+        "upper_margin": {"type": ["number", "string"]},
+        "unit": {"$ref": "#/$defs/nonEmpty"}
+      }
+    },
+    "futilityRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["measure", "operator", "threshold", "unit"],
+      "properties": {
+        "measure": {"$ref": "#/$defs/nonEmpty"},
+        "operator": {"enum": ["==", "!=", ">", ">=", "<", "<="]},
+        "threshold": {"type": ["number", "string", "boolean"]},
+        "unit": {
+          "anyOf": [
+            {"$ref": "#/$defs/nonEmpty"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "futilityObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit", "evidence_refs"],
+      "properties": {
+        "value": {"type": ["number", "string", "boolean"]},
+        "unit": {
+          "anyOf": [
+            {"$ref": "#/$defs/nonEmpty"},
+            {"type": "null"}
+          ]
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/nonEmpty"}
+        }
+      }
+    },
+    "precisionPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "estimand",
+        "independent_unit",
+        "primary_endpoint",
+        "sesoi",
+        "framework",
+        "lower_margin",
+        "upper_margin",
+        "split",
+        "multiplicity_policy"
+      ],
+      "properties": {
+        "estimand": {"$ref": "#/$defs/nonEmpty"},
+        "independent_unit": {"$ref": "#/$defs/nonEmpty"},
+        "primary_endpoint": {"$ref": "#/$defs/nonEmpty"},
+        "sesoi": {
+          "oneOf": [
+            {"$ref": "#/$defs/quantity"},
+            {"$ref": "#/$defs/asymmetricSesoi"}
+          ]
+        },
+        "framework": {
+          "enum": ["TOST", "CI_EQUIVALENCE", "BAYESIAN_ROPE", "FUTILITY"]
+        },
+        "lower_margin": {"type": ["number", "string"]},
+        "upper_margin": {"type": ["number", "string"]},
+        "alpha": {"type": ["number", "string"]},
+        "interval_level": {"type": ["number", "string"]},
+        "posterior_threshold": {"type": ["number", "string"]},
+        "futility_rule": {"$ref": "#/$defs/futilityRule"},
+        "split": {},
+        "multiplicity_policy": {"$ref": "#/$defs/nonEmpty"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"framework": {"const": "TOST"}}},
+          "then": {"required": ["alpha", "interval_level"]}
+        },
+        {
+          "if": {"properties": {"framework": {"const": "CI_EQUIVALENCE"}}},
+          "then": {"required": ["interval_level"]}
+        },
+        {
+          "if": {"properties": {"framework": {"const": "BAYESIAN_ROPE"}}},
+          "then": {"required": ["posterior_threshold"]}
+        },
+        {
+          "if": {"properties": {"framework": {"const": "FUTILITY"}}},
+          "then": {"required": ["futility_rule"]}
+        }
+      ]
+    },
+    "precisionEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["estimate", "criterion_details"],
+      "properties": {
+        "estimate": {"type": ["number", "string"]},
+        "interval_lower": {"type": ["number", "string"]},
+        "interval_upper": {"type": ["number", "string"]},
+        "interval_level": {"type": ["number", "string"]},
+        "posterior_mass_in_rope": {"type": ["number", "string"]},
+        "futility_observation": {"$ref": "#/$defs/futilityObservation"},
+        "criterion_details": {"$ref": "#/$defs/nonEmpty"}
+      }
+    },
+    "technicalCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "criterion_id", "basis", "measure", "operator", "threshold", "unit"
+      ],
+      "properties": {
+        "criterion_id": {"$ref": "#/$defs/nonEmpty"},
+        "basis": {
+          "enum": [
+            "LEAKAGE", "INFEASIBLE_COST", "NO_ORACLE_HEADROOM",
+            "NON_DISCRIMINATING", "DATA_INVALID"
+          ]
+        },
+        "measure": {"$ref": "#/$defs/nonEmpty"},
+        "operator": {"enum": ["==", "!=", ">", ">=", "<", "<="]},
+        "threshold": {"type": ["number", "string", "boolean"]},
+        "unit": {
+          "anyOf": [
+            {"$ref": "#/$defs/nonEmpty"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "hardStopEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "criterion_id", "basis", "observation", "evidence_refs"
+      ],
+      "properties": {
+        "criterion_id": {"$ref": "#/$defs/nonEmpty"},
+        "basis": {
+          "enum": [
+            "LEAKAGE", "INFEASIBLE_COST", "NO_ORACLE_HEADROOM",
+            "NON_DISCRIMINATING", "DATA_INVALID"
+          ]
+        },
+        "observation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value", "unit"],
+          "properties": {
+            "value": {"type": ["number", "string", "boolean"]},
+            "unit": {
+              "anyOf": [
+                {"$ref": "#/$defs/nonEmpty"},
+                {"type": "null"}
+              ]
+            }
+          }
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/nonEmpty"}
+        }
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "required": [
+        "data_version",
+        "split",
+        "baselines",
+        "strongest_baseline",
+        "metrics",
+        "primary_endpoint",
+        "statistical_route",
+        "budget",
+        "code_version",
+        "decision_rule"
+      ],
+      "properties": {
+        "data_version": {},
+        "split": {},
+        "baselines": {"type": "array", "minItems": 1},
+        "strongest_baseline": {},
+        "metrics": {"type": "array", "minItems": 1},
+        "primary_endpoint": {},
+        "statistical_route": {},
+        "budget": {},
+        "code_version": {},
+        "decision_rule": {}
+      }
+    },
+    "preregistration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "preregistration_id",
+        "gap_id",
+        "claim_fingerprint",
+        "smoke_kind",
+        "protocol",
+        "created_at"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "smoke_preregistration"},
+        "preregistration_id": {"$ref": "#/$defs/nonEmpty"},
+        "gap_id": {"$ref": "#/$defs/nonEmpty"},
+        "claim_fingerprint": {"$ref": "#/$defs/hash"},
+        "smoke_kind": {"enum": ["technical", "precision"]},
+        "protocol": {"$ref": "#/$defs/protocol"},
+        "precision_plan": {"$ref": "#/$defs/precisionPlan"},
+        "technical_kill_criteria": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/technicalCriterion"}
+        },
+        "created_at": {"$ref": "#/$defs/nonEmpty"},
+        "rationale": {"type": "object"},
+        "expected_discrimination": {"type": "object"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"smoke_kind": {"const": "precision"}}},
+          "then": {"required": ["precision_plan"]}
+        }
+      ]
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "design",
+        "execute_local",
+        "train_models",
+        "access_final_holdout",
+        "install_dependencies",
+        "use_external_api",
+        "use_remote_compute",
+        "external_upload"
+      ],
+      "properties": {
+        "design": {"type": "boolean"},
+        "execute_local": {"type": "boolean"},
+        "train_models": {"type": "boolean"},
+        "access_final_holdout": {"type": "boolean"},
+        "install_dependencies": {"type": "boolean"},
+        "use_external_api": {"type": "boolean"},
+        "use_remote_compute": {"type": "boolean"},
+        "external_upload": {"type": "boolean"}
+      }
+    },
+    "dataScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dataset_id",
+        "version",
+        "slices",
+        "access",
+        "final_holdout"
+      ],
+      "properties": {
+        "dataset_id": {"$ref": "#/$defs/nonEmpty"},
+        "version": {"$ref": "#/$defs/nonEmpty"},
+        "slices": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/nonEmpty"}
+        },
+        "access": {"enum": ["read", "read_write"]},
+        "final_holdout": {"type": "boolean"}
+      }
+    },
+    "limits": {
+      "type": "object",
+      "required": [
+        "wall_time",
+        "cpu_cores",
+        "memory",
+        "runs",
+        "trials",
+        "seeds",
+        "cost"
+      ],
+      "properties": {
+        "wall_time": {"$ref": "#/$defs/quantity"},
+        "cpu_cores": {"$ref": "#/$defs/quantity"},
+        "memory": {"$ref": "#/$defs/quantity"},
+        "runs": {"$ref": "#/$defs/quantity"},
+        "trials": {"$ref": "#/$defs/quantity"},
+        "seeds": {"$ref": "#/$defs/quantity"},
+        "cost": {"$ref": "#/$defs/quantity"}
+      },
+      "additionalProperties": {"$ref": "#/$defs/quantity"}
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "authorization_id",
+        "status",
+        "authorized_by",
+        "authorization_event_id",
+        "granted_at",
+        "expires_at",
+        "smoke_kind",
+        "gap_id",
+        "claim_fingerprint",
+        "protocol_fingerprint",
+        "preregistration_hash",
+        "permissions",
+        "data_scope",
+        "compute_limits",
+        "network_allowlist",
+        "filesystem_write_roots",
+        "privacy_constraints",
+        "consumption"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "smoke_authorization"},
+        "authorization_id": {"$ref": "#/$defs/nonEmpty"},
+        "status": {
+          "enum": ["active", "consumed", "expired", "revoked", "stale"]
+        },
+        "authorized_by": {"const": "user"},
+        "authorization_event_id": {"$ref": "#/$defs/nonEmpty"},
+        "granted_at": {"$ref": "#/$defs/nonEmpty"},
+        "expires_at": {"type": ["string", "null"]},
+        "smoke_kind": {"enum": ["technical", "precision"]},
+        "gap_id": {"$ref": "#/$defs/nonEmpty"},
+        "claim_fingerprint": {"$ref": "#/$defs/hash"},
+        "protocol_fingerprint": {"$ref": "#/$defs/hash"},
+        "preregistration_hash": {"$ref": "#/$defs/hash"},
+        "permissions": {"$ref": "#/$defs/permissions"},
+        "data_scope": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/dataScope"}
+        },
+        "compute_limits": {"$ref": "#/$defs/limits"},
+        "network_allowlist": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonEmpty"}
+        },
+        "filesystem_write_roots": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonEmpty"}
+        },
+        "privacy_constraints": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonEmpty"}
+        },
+        "consumption": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/quantity"}
+        }
+      }
+    },
+    "operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trained_models",
+        "accessed_final_holdout",
+        "installed_dependencies",
+        "used_external_api",
+        "used_remote_compute",
+        "uploaded_external"
+      ],
+      "properties": {
+        "trained_models": {"type": "boolean"},
+        "accessed_final_holdout": {"type": "boolean"},
+        "installed_dependencies": {"type": "boolean"},
+        "used_external_api": {"type": "boolean"},
+        "used_remote_compute": {"type": "boolean"},
+        "uploaded_external": {"type": "boolean"}
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "result_id",
+        "gap_id",
+        "authorization_id",
+        "smoke_kind",
+        "claim_fingerprint",
+        "protocol_fingerprint",
+        "preregistration_hash",
+        "operations",
+        "resource_consumption",
+        "confidence_class",
+        "p_value_only",
+        "precision_adequate",
+        "results",
+        "completed_at"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "smoke_result"},
+        "result_id": {"$ref": "#/$defs/nonEmpty"},
+        "gap_id": {"$ref": "#/$defs/nonEmpty"},
+        "authorization_id": {"$ref": "#/$defs/nonEmpty"},
+        "smoke_kind": {"enum": ["technical", "precision"]},
+        "claim_fingerprint": {"$ref": "#/$defs/hash"},
+        "protocol_fingerprint": {"$ref": "#/$defs/hash"},
+        "preregistration_hash": {"$ref": "#/$defs/hash"},
+        "operations": {"$ref": "#/$defs/operations"},
+        "resource_consumption": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {"$ref": "#/$defs/quantity"}
+        },
+        "confidence_class": {"enum": ["adequate", "wide", "not_applicable"]},
+        "p_value_only": {"type": "boolean"},
+        "precision_adequate": {"type": "boolean"},
+        "stop_basis": {
+          "enum": [
+            "TOST", "CI_EQUIVALENCE", "BAYESIAN_ROPE", "FUTILITY",
+            "LEAKAGE", "INFEASIBLE_COST", "NO_ORACLE_HEADROOM",
+            "NON_DISCRIMINATING", "DATA_INVALID", "none"
+          ]
+        },
+        "precision_evidence": {"$ref": "#/$defs/precisionEvidence"},
+        "hard_stop_evidence": {"$ref": "#/$defs/hardStopEvidence"},
+        "results": {"type": "object", "minProperties": 1},
+        "completed_at": {"$ref": "#/$defs/nonEmpty"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"smoke_kind": {"const": "precision"}}},
+          "then": {"required": ["precision_evidence"]}
+        }
+      ]
+    }
+  }
+}

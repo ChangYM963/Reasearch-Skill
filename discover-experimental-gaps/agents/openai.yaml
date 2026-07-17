@@ -1,0 +1,4 @@
+interface:
+  display_name: "Experimental Gap Discovery"
+  short_description: "Find and falsify testable research gaps"
+  default_prompt: "Use $discover-experimental-gaps to map a venue, falsify candidate gaps, and freeze a defensible experiment plan."

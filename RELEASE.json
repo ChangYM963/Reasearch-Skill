@@ -1,0 +1,12 @@
+{
+  "release_format_version": "1.0.0",
+  "skill_name": "discover-experimental-gaps",
+  "skill_version": "1.0.0",
+  "schema_version": "1.0.0",
+  "fingerprint_version": "1.0.0",
+  "runtime_file_count": 21,
+  "skill_tree_sha256": "98ce1650682899792754d095068a7d7a2cc7a4cc1eddf1d9caaec9f75f567e54",
+  "python_minimum": "3.9",
+  "bundled_regression_tests": 51,
+  "created_on": "2026-07-17"
+}
